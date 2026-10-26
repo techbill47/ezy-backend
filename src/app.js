@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth.js';
 import departmentRoutes from './routes/departments.js';
+import courseRoutes from './routes/courses.js';
 import { requireAuth, serializeUser } from './middleware/auth.js';
 
 export const app = express();
@@ -15,6 +16,7 @@ app.get('/health', (_req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/departments', departmentRoutes);
+app.use('/api/courses', courseRoutes);
 app.get('/api/me', requireAuth, (req, res) => res.json(serializeUser(req.user)));
 
 app.use((error, _req, res, _next) => {
