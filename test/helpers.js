@@ -8,6 +8,9 @@ if (!testDatabaseUrl || !/test/i.test(testDatabaseUrl)) {
 if (process.env.DATABASE_URL && process.env.DATABASE_URL === testDatabaseUrl) {
   throw new Error('Refusing to run tests: DATABASE_URL and TEST_DATABASE_URL must differ.');
 }
+// The app's database module reads DATABASE_URL, so point it at the validated
+// test database before dynamically importing the app in a test.
+process.env.DATABASE_URL = testDatabaseUrl;
 
 const sslMode = new URL(testDatabaseUrl).searchParams.get('sslmode');
 export const testPool = new pg.Pool({
