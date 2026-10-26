@@ -81,6 +81,24 @@ test('a student only sees courses for their department and year', async (t) => {
   assert.deepEqual(courses.map(({ code }) => code), ['MIE 101']);
 });
 
+test('a student in a different department and year sees none of the other class courses', async (t) => {
+  const { fetch: testFetch } = await startTestApp(t);
+  const mieCoordinator = await register(testFetch, { matricule: 'COORD-005', role: 'coordinator' });
+  const created = await testFetch('/api/courses', json(mieCoordinator, {
+    code: 'MIE 101', name: 'MIE Year 1',
+  }));
+  assert.equal(created.status, 201);
+
+  const otherClassToken = await register(testFetch, {
+    matricule: 'STUDENT-005', departmentCode: 'CPE', year: 2,
+  });
+  const response = await testFetch('/api/courses', {
+    headers: { authorization: `Bearer ${otherClassToken}` },
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), []);
+});
+
 test('GET /api/courses requires a token', async (t) => {
   const { fetch: testFetch } = await startTestApp(t);
   const response = await testFetch('/api/courses');
