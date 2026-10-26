@@ -9,7 +9,7 @@ import { serializeUser } from '../middleware/auth.js';
 
 const router = Router();
 const registerSchema = z.object({
-  matricule: z.string().trim().min(1),
+  matricule: z.string().trim().toUpperCase().min(1),
   fullName: z.string().trim().min(1),
   phone: z.string().trim().min(1),
   pin: z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits.'),
@@ -19,13 +19,14 @@ const registerSchema = z.object({
   coordinatorCode: z.string().optional(),
 });
 const loginSchema = z.object({
-  matricule: z.string().trim().min(1),
+  matricule: z.string().trim().toUpperCase().min(1),
   pin: z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits.'),
 });
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: 50,
+  skipSuccessfulRequests: true,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: { error: 'Too many login attempts. Please try again later.' },

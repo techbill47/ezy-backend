@@ -66,6 +66,39 @@ test('rejects a duplicate matricule', async (t) => {
   assert.match((await response.json()).error, /matricule/i);
 });
 
+test('normalizes matricule casing on registration and login and rejects casing duplicates', async (t) => {
+  const { fetch: testFetch } = await startTestApp(t);
+  const payload = await registrationPayload({ matricule: '  demo-s01  ' });
+  const registered = await register(testFetch, payload);
+  assert.equal(registered.status, 201);
+  const created = await registered.json();
+  assert.equal(created.user.matricule, 'DEMO-S01');
+
+  const login = await testFetch('/api/auth/login', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ matricule: ' demo-s01 ', pin: payload.pin }),
+  });
+  assert.equal(login.status, 200);
+  assert.equal((await login.json()).user.matricule, 'DEMO-S01');
+
+  const duplicate = await register(testFetch, { ...payload, matricule: 'demo-s01', phone: '+237600000099' });
+  assert.equal(duplicate.status, 409);
+  assert.match((await duplicate.json()).error, /matricule/i);
+});
+
+test('allows more than ten successful logins in a row', async (t) => {
+  const { fetch: testFetch } = await startTestApp(t);
+  const payload = await registrationPayload();
+  assert.equal((await register(testFetch, payload)).status, 201);
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const response = await testFetch('/api/auth/login', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ matricule: payload.matricule, pin: payload.pin }),
+    });
+    assert.equal(response.status, 200, `login ${attempt + 1} should succeed`);
+  }
+});
+
 test('rejects a duplicate phone number', async (t) => {
   const { fetch: testFetch } = await startTestApp(t);
   const payload = await registrationPayload();

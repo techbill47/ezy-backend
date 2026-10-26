@@ -7,6 +7,7 @@ import { requireAuth, serializeUser } from './middleware/auth.js';
 
 export const app = express();
 
+app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json());
 
@@ -19,7 +20,14 @@ app.use('/api/departments', departmentRoutes);
 app.use('/api/courses', courseRoutes);
 app.get('/api/me', requireAuth, (req, res) => res.json(serializeUser(req.user)));
 
-app.use((error, _req, res, _next) => {
-  console.error('Request failed.');
+app.use((_req, res) => {
+  res.status(404).json({ error: 'Not found.' });
+});
+
+app.use((error, req, res, _next) => {
+  console.error(error.message, req.method, req.path);
+  if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
+    return res.status(400).json({ error: 'Invalid JSON body.' });
+  }
   res.status(500).json({ error: 'An unexpected error occurred.' });
 });
