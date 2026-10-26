@@ -158,4 +158,64 @@ router.get('/active', async (req, res, next) => {
   }
 });
 
+router.get('/:id/report', async (req, res, next) => {
+  const parsedId = uuidSchema.safeParse(req.params.id);
+  if (!parsedId.success) return res.status(400).json({ error: 'Session id must be a valid UUID.' });
+  if (req.user.role !== 'coordinator') {
+    return res.status(403).json({ error: 'Only coordinators can view attendance reports.' });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT s.id AS session_id, s.course_id, s.code AS session_code,
+              s.started_at, s.ends_at, s.status,
+              c.code AS course_code, c.name AS course_name,
+              c.department_id, c.year
+       FROM sessions s JOIN courses c ON c.id = s.course_id
+       WHERE s.id = $1`,
+      [parsedId.data],
+    );
+    if (!result.rowCount) return res.status(404).json({ error: 'Session not found.' });
+    const row = result.rows[0];
+    if (row.department_id !== req.user.department_id || row.year !== req.user.year) {
+      return res.status(403).json({ error: 'This report is for a different department or year.' });
+    }
+
+    const studentResult = await pool.query(
+        `SELECT u.matricule, u.full_name, (a.id IS NOT NULL) AS present, a.detected_at AS marked_at
+         FROM users u
+         LEFT JOIN attendance a ON a.student_id = u.id AND a.session_id = $1
+         WHERE u.department_id = $2 AND u.year = $3
+           AND (u.role = 'student' OR u.id = (SELECT started_by FROM sessions WHERE id = $1))
+         ORDER BY u.matricule`,
+        [parsedId.data, row.department_id, row.year],
+      );
+    return res.json({
+      course: {
+        id: row.course_id,
+        code: row.course_code,
+        name: row.course_name,
+        departmentId: row.department_id,
+        year: row.year,
+      },
+      session: {
+        id: row.session_id,
+        courseId: row.course_id,
+        code: row.session_code,
+        startedAt: row.started_at,
+        endsAt: row.ends_at,
+        status: row.status,
+      },
+      students: studentResult.rows.map((student) => ({
+        matricule: student.matricule,
+        fullName: student.full_name,
+        present: student.present,
+        markedAt: student.marked_at,
+      })),
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 export default router;

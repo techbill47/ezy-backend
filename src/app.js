@@ -4,6 +4,7 @@ import authRoutes from './routes/auth.js';
 import departmentRoutes from './routes/departments.js';
 import courseRoutes from './routes/courses.js';
 import sessionRoutes from './routes/sessions.js';
+import attendanceRoutes from './routes/attendance.js';
 import { requireAuth, serializeUser } from './middleware/auth.js';
 
 export const app = express();
@@ -20,6 +21,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/sessions', sessionRoutes);
+app.use('/api/attendance', attendanceRoutes);
 app.get('/api/me', requireAuth, (req, res) => res.json(serializeUser(req.user)));
 
 app.use((_req, res) => {
