@@ -60,9 +60,14 @@ Sync rules:
 Errors: {error: "message"} with proper HTTP status codes.
 
 ## BLE SPEC
-- The coordinator phone advertises one constant EZY service UUID (defined once as a constant in the app) with the 6-character session code as payload. Preferred encoding: service data. Fallbacks, in order: manufacturer data, device name.
-- The student phone scans for that UUID for up to 10 seconds, reads the code, stores {sessionCode, detectedAt} locally and shows "Marked".
+- The coordinator phone advertises one constant EZY service UUID (defined once as a constant in the app). The payload is: CLASS TAG (2 bytes: department id, then year) followed by the 6-character SESSION CODE (8 bytes in total). Preferred encoding: service data. Fallbacks, in order: manufacturer data, device name.
+- CLASS TAG = a filter only, never proof. It is the same every day (the coordinator's department id and year), so it can be copied. It is NOT sent to the server and the server rules do not change.
+- SESSION CODE = the proof of presence. Random, created by the server for each session (see POST /api/sessions).
+- The student phone scans for that UUID for up to 10 seconds. It IGNORES every signal whose class tag differs from its own department id + year (known from login, saved on the phone, so this works offline). If several signals of its own class remain, it keeps the STRONGEST (highest RSSI). It stores {sessionCode, detectedAt} locally and shows "Marked". If it only heard other classes, it shows "No session found for your class".
+- detectedAt is ALWAYS sent to the server in UTC with a timezone (DateTime.now().toUtc().toIso8601String()). The server rejects times without a timezone.
+- The server remains the final check: wrong department/year is rejected, and the time window rule applies.
 - No pairing, no connection. App must be open (foreground only).
+- If the class tag does not fit in the advertisement on the test phones, drop the tag from the broadcast and use the fallback: keep the strongest signal and let the server reject wrong-class codes.
 - If BLE advertising fails on the test phones, the fallback is: the coordinator screen shows the 6-character code and the student types it in.
 
 ## OFFLINE RULES
