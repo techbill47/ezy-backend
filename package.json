@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "migrate": "node scripts/migrate.js",
+    "migrate:test": "node scripts/migrate.js --test",
     "seed": "node db/seed.js",
+    "seed:test": "node db/seed.js --test",
     "test": "node --test"
   },
   "dependencies": {

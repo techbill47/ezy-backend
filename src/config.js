@@ -1,6 +1,6 @@
 import 'dotenv/config';
 
-const required = ['DATABASE_URL', 'TEST_DATABASE_URL', 'JWT_SECRET', 'COORDINATOR_CODE'];
+const required = ['DATABASE_URL', 'JWT_SECRET', 'COORDINATOR_CODE'];
 for (const key of required) {
   if (!process.env[key]) throw new Error(`Missing required environment variable: ${key}`);
 }

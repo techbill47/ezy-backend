@@ -1,4 +1,18 @@
-import { pool } from '../src/db.js';
+import pg from 'pg';
+import 'dotenv/config';
+
+const useTestDatabase = process.argv.includes('--test');
+const connectionString = useTestDatabase
+  ? process.env.TEST_DATABASE_URL
+  : process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error(`Missing required environment variable: ${useTestDatabase ? 'TEST_DATABASE_URL' : 'DATABASE_URL'}`);
+}
+const sslMode = new URL(connectionString).searchParams.get('sslmode');
+const pool = new pg.Pool({
+  connectionString,
+  ...(sslMode === 'require' ? { ssl: { rejectUnauthorized: false } } : {}),
+});
 
 const departments = [
   ['CBE', 'Chemical and Biological Engineering'],

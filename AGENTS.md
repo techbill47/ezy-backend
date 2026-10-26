@@ -1,5 +1,4 @@
 # AGENTS.md - ezy-backend
-(Copy this file into the ezy-backend folder and name it AGENTS.md)
 
 Read PRODUCT-SPEC.md first. It is the source of truth. If anything conflicts, stop and ask.
 
