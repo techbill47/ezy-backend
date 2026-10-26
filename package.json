@@ -8,6 +8,8 @@
     "migrate": "node scripts/migrate.js",
     "migrate:test": "node scripts/migrate.js --test",
     "seed": "node db/seed.js",
+    "seed:demo": "node db/seed.js --demo",
+    "seed:demo:reset": "node db/seed.js --demo --reset",
     "seed:test": "node db/seed.js --test",
     "test": "node --test --test-concurrency=1"
   },

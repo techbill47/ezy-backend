@@ -143,3 +143,46 @@ test('active lookup automatically ends expired sessions', async (t) => {
   const stored = await testPool.query('SELECT status FROM sessions WHERE id = $1', [session.id]);
   assert.equal(stored.rows[0].status, 'ended');
 });
+
+test('session list is limited to the coordinator, filters courses, and counts attendance', async (t) => {
+  const { fetch: testFetch } = await startTestApp(t);
+  const owner = await register(testFetch, { matricule: 'COORD-LIST-001', role: 'coordinator' });
+  const other = await register(testFetch, { matricule: 'COORD-LIST-002', role: 'coordinator' });
+  const course1 = await createCourse(testFetch, owner, { code: 'MIE 201', name: 'Course One' });
+  const course2 = await createCourse(testFetch, owner, { code: 'MIE 202', name: 'Course Two' });
+  const student = await register(testFetch, { matricule: 'STUDENT-LIST-001' });
+  const studentId = (await testPool.query('SELECT id FROM users WHERE matricule = $1', ['STUDENT-LIST-001'])).rows[0].id;
+  const first = await (await startSession(testFetch, owner, course1.id)).json();
+  await testFetch(`/api/sessions/${first.id}/end`, postJson(owner, {}));
+  const second = await (await startSession(testFetch, owner, course2.id)).json();
+  await testPool.query(
+    'INSERT INTO attendance (session_id, student_id, detected_at) VALUES ($1, $2, now())',
+    [first.id, studentId],
+  );
+  const ownerHeaders = { headers: { authorization: `Bearer ${owner}` } };
+  const list = await testFetch('/api/sessions', ownerHeaders);
+  assert.equal(list.status, 200);
+  const items = await list.json();
+  assert.deepEqual(items.map((item) => item.id), [second.id, first.id]);
+  assert.equal(items[1].presentCount, 2); // student and coordinator
+  assert.equal(items[0].presentCount, 1);
+  assert.equal(items[0].courseCode, course2.code);
+  assert.equal(items[0].courseName, course2.name);
+  const filtered = await testFetch(`/api/sessions?courseId=${course1.id}`, ownerHeaders);
+  assert.deepEqual((await filtered.json()).map((item) => item.id), [first.id]);
+  const otherList = await testFetch('/api/sessions', { headers: { authorization: `Bearer ${other}` } });
+  assert.deepEqual(await otherList.json(), []);
+  const studentList = await testFetch('/api/sessions', { headers: { authorization: `Bearer ${student}` } });
+  assert.equal(studentList.status, 403);
+  assert.equal((await testFetch('/api/sessions')).status, 401);
+});
+
+test('session list ends expired sessions started by the coordinator', async (t) => {
+  const { fetch: testFetch } = await startTestApp(t);
+  const token = await register(testFetch, { matricule: 'COORD-LIST-003', role: 'coordinator' });
+  const course = await createCourse(testFetch, token);
+  const session = await (await startSession(testFetch, token, course.id)).json();
+  await testPool.query("UPDATE sessions SET ends_at = now() - interval '1 second' WHERE id = $1", [session.id]);
+  const response = await testFetch('/api/sessions', { headers: { authorization: `Bearer ${token}` } });
+  assert.equal((await response.json())[0].status, 'ended');
+});

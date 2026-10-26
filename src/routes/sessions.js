@@ -10,6 +10,7 @@ const startSchema = z.object({
   durationMinutes: z.number().int().min(1).max(240),
 });
 const uuidSchema = z.string().uuid();
+const listQuerySchema = z.object({ courseId: z.string().uuid().optional() });
 const sessionCodeAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 function generateSessionCode() {
@@ -36,6 +37,47 @@ const sessionSelect = `
 `;
 
 router.use(requireAuth);
+
+router.get('/', async (req, res, next) => {
+  if (req.user.role !== 'coordinator') {
+    return res.status(403).json({ error: 'Only coordinators can list their sessions.' });
+  }
+  const parsed = listQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid session filters.' });
+  }
+  try {
+    await pool.query(
+      `UPDATE sessions SET status = 'ended'
+       WHERE started_by = $1 AND status = 'active' AND ends_at <= now()`,
+      [req.user.id],
+    );
+    const result = await pool.query(
+      `SELECT s.id, s.course_id, s.code, s.started_at, s.ends_at, s.status,
+              c.code AS course_code, c.name AS course_name,
+              count(a.id)::integer AS present_count
+       FROM sessions s JOIN courses c ON c.id = s.course_id
+       LEFT JOIN attendance a ON a.session_id = s.id
+       WHERE s.started_by = $1 AND ($2::uuid IS NULL OR s.course_id = $2)
+       GROUP BY s.id, c.code, c.name
+       ORDER BY s.started_at DESC LIMIT 50`,
+      [req.user.id, parsed.data.courseId ?? null],
+    );
+    return res.json(result.rows.map((row) => ({
+      id: row.id,
+      courseId: row.course_id,
+      courseCode: row.course_code,
+      courseName: row.course_name,
+      code: row.code,
+      startedAt: row.started_at,
+      endsAt: row.ends_at,
+      status: row.status,
+      presentCount: row.present_count,
+    })));
+  } catch (error) {
+    return next(error);
+  }
+});
 
 router.post('/', async (req, res, next) => {
   if (req.user.role !== 'coordinator') {

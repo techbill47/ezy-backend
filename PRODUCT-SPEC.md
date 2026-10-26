@@ -44,6 +44,7 @@ Years: 1 to 5.
 - GET  /api/courses -> courses of my department + year
 - POST /api/courses {code, name} (coordinator only) -> course (department + year taken from the coordinator)
 - POST /api/sessions {courseId, durationMinutes} (coordinator only) -> session (includes code). Also marks the coordinator present.
+- GET  /api/sessions (coordinator only) -> sessions started by me, newest first (max 50); optional `?courseId=` filter; each item is `{id, courseId, courseCode, courseName, code, startedAt, endsAt, status, presentCount}`. Expired sessions started by me are ended before listing.
 - POST /api/sessions/:id/end (only the coordinator who started it)
 - GET  /api/sessions/active -> the active session for my department + year, or null
 - GET  /api/sessions/:id/report (coordinator only) -> {course, session, students:[{matricule, fullName, present, markedAt}]} - ALL students of that department + year, present or not
