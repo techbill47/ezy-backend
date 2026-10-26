@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, test } from 'node:test';
-import { startTestApp, testPool } from './helpers.js';
+import { nextTestPhone, startTestApp, testPool } from './helpers.js';
 
 after(() => testPool.end());
 
@@ -10,7 +10,7 @@ async function registrationPayload(overrides = {}) {
   return {
     matricule: 'STU-001',
     fullName: 'Test Student',
-    phone: '+237600000001',
+    phone: nextTestPhone(),
     pin: '1234',
     departmentId: department.rows[0].id,
     year: 1,
@@ -61,7 +61,7 @@ test('rejects a duplicate matricule', async (t) => {
   const { fetch: testFetch } = await startTestApp(t);
   const payload = await registrationPayload();
   assert.equal((await register(testFetch, payload)).status, 201);
-  const response = await register(testFetch, { ...payload, phone: '+237600000002' });
+  const response = await register(testFetch, { ...payload, phone: nextTestPhone() });
   assert.equal(response.status, 409);
   assert.match((await response.json()).error, /matricule/i);
 });
@@ -81,7 +81,7 @@ test('normalizes matricule casing on registration and login and rejects casing d
   assert.equal(login.status, 200);
   assert.equal((await login.json()).user.matricule, 'DEMO-S01');
 
-  const duplicate = await register(testFetch, { ...payload, matricule: 'demo-s01', phone: '+237600000099' });
+  const duplicate = await register(testFetch, { ...payload, matricule: 'demo-s01', phone: nextTestPhone() });
   assert.equal(duplicate.status, 409);
   assert.match((await duplicate.json()).error, /matricule/i);
 });

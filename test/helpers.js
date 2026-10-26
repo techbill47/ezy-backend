@@ -12,6 +12,12 @@ if (process.env.DATABASE_URL && process.env.DATABASE_URL === testDatabaseUrl) {
 // test database before dynamically importing the app in a test.
 process.env.DATABASE_URL = testDatabaseUrl;
 
+let phoneSequence = 0;
+export function nextTestPhone() {
+  phoneSequence += 1;
+  return `6${String(phoneSequence).padStart(8, '0')}`;
+}
+
 const sslMode = new URL(testDatabaseUrl).searchParams.get('sslmode');
 export const testPool = new pg.Pool({
   connectionString: testDatabaseUrl,

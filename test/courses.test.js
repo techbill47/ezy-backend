@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, test } from 'node:test';
-import { startTestApp, testPool } from './helpers.js';
+import { nextTestPhone, startTestApp, testPool } from './helpers.js';
 
 after(() => testPool.end());
 
@@ -13,7 +13,7 @@ async function register(testFetch, { matricule, role = 'student', year = 1, depa
     body: JSON.stringify({
       matricule,
       fullName: `Name ${matricule}`,
-      phone: `+237${matricule.replace(/\D/g, '').padStart(9, '0')}`,
+      phone: nextTestPhone(),
       pin: '1234',
       departmentId: department.rows[0].id,
       year,
