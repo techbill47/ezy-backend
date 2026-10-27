@@ -41,6 +41,8 @@ Years: 1 to 5.
 - POST /api/auth/register {matricule, fullName, phone, pin, departmentId, year, role, coordinatorCode?} -> {token, user}
 - POST /api/auth/login {matricule, pin} -> {token, user}
 - GET  /api/me -> user
+- GET  /api/me/attendance (student only) -> {overall:{attended,totalSessions,percentage},courses:[{courseId,code,name,attended,totalSessions,percentage}],records:[{sessionCode,courseCode,courseName,detectedAt,syncedAt}]}
+  Requires a Bearer JWT; coordinators receive 403. Courses are all courses for the student's department + year, sorted by code, including courses with no sessions. Session totals include sessions with status 'ended' or whose ends_at has passed; attendance counts this student's rows in those sessions. Percentages are attended / totalSessions x 100, rounded to 1 decimal (0 when totalSessions is 0); overall totals sum across courses. Records include this student's attendance for any session, newest detectedAt first, maximum 100.
 - GET  /api/courses -> courses of my department + year
 - POST /api/courses {code, name} (coordinator only) -> course (department + year taken from the coordinator)
 - POST /api/sessions {courseId, durationMinutes} (coordinator only) -> session (includes code). Also marks the coordinator present.
